@@ -126,16 +126,7 @@
     color:#7a7460;
   }
   td.num, th.num{ text-align:right; }
-  .pill{
-    display:inline-block;
-    padding:2px 9px;
-    border-radius:20px;
-    font-weight:700;
-    font-size:.82rem;
-  }
-  .pill.ok{ background:var(--ok-bg); color:var(--ok); }
-  .pill.warn{ background:var(--warn-bg); color:var(--warn); }
-  .pill.bad{ background:var(--bad-bg); color:var(--bad); }
+  .hidden-row{ display:none; }
   .status{
     font-size:.82rem;
     padding:10px 14px;
@@ -212,7 +203,10 @@
       </thead>
       <tbody id="tbody"></tbody>
     </table>
-    <p class="foot-note">Verde: cumple el margen objetivo del rubro. Amarillo: por debajo del objetivo pero por encima del mínimo. Rojo: por debajo del margen mínimo — no vender a ese precio por ese medio.</p>
+    <div style="text-align:center; margin-top:14px;">
+      <button id="btnVerMas" onclick="toggleVerMas()" style="background:none;border:1px solid var(--clay);color:var(--clay-dark);padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:.85rem;">Ver más medios de pago ▼</button>
+    </div>
+    <p class="foot-note">El margen real baja a medida que aumentan las cuotas: es más alto en efectivo/transferencia y más bajo en los planes con más financiación.</p>
   </div>
 </main>
 
@@ -221,22 +215,24 @@ let PARAMS = null;
 let modo = 'sas';
 
 const CHANNEL_ROWS = [
-  {label:"Pago Nube 2 cuotas (7 días)", row:29},
-  {label:"Pago Nube 3 cuotas (7 días)", row:30},
-  {label:"Pago Nube 6 cuotas (7 días)", row:31},
-  {label:"Pago Nube 9 cuotas (7 días)", row:32},
-  {label:"Pago Nube 12 cuotas (7 días)", row:33},
-  {label:"Transferencia Pago Nube (2 días)", row:34},
-  {label:"Mercado Pago 2 cuotas", row:35},
-  {label:"Mercado Pago 3 cuotas", row:36},
-  {label:"Mercado Pago 6 cuotas", row:37},
-  {label:"MODO 2 cuotas", row:38},
-  {label:"MODO 3 cuotas", row:39},
-  {label:"MODO 6 cuotas", row:40},
-  {label:"Efectivo / Transf. directa (showroom)", row:41},
-  {label:"Payway 0 cuotas (showroom)", row:42},
-  {label:"Payway 3 cuotas (showroom)", row:43},
-  {label:"Payway 6 cuotas (showroom)", row:44},
+  // Principales: se muestran siempre
+  {label:"Efectivo / Transf. directa (showroom)", row:41, principal:true},
+  {label:"Transferencia Pago Nube (2 días)", row:34, principal:true},
+  {label:"Pago Nube 3 cuotas (7 días)", row:30, principal:true},
+  {label:"Pago Nube 6 cuotas (7 días)", row:31, principal:true},
+  {label:"Payway 0 cuotas (showroom)", row:42, principal:true},
+  {label:"Payway 3 cuotas (showroom)", row:43, principal:true},
+  {label:"Payway 6 cuotas (showroom)", row:44, principal:true},
+  // Resto: detrás de "Ver más"
+  {label:"Pago Nube 2 cuotas (7 días)", row:29, principal:false},
+  {label:"Pago Nube 9 cuotas (7 días)", row:32, principal:false},
+  {label:"Pago Nube 12 cuotas (7 días)", row:33, principal:false},
+  {label:"Mercado Pago 2 cuotas", row:35, principal:false},
+  {label:"Mercado Pago 3 cuotas", row:36, principal:false},
+  {label:"Mercado Pago 6 cuotas", row:37, principal:false},
+  {label:"MODO 2 cuotas", row:38, principal:false},
+  {label:"MODO 3 cuotas", row:39, principal:false},
+  {label:"MODO 6 cuotas", row:40, principal:false},
 ];
 
 const ROWS = {
@@ -269,7 +265,7 @@ async function cargarParametros(){
       const costoAcredit = Number(cell(ws, 'D'+ch.row)) || 0;
       const incluyeTN = String(cell(ws, 'E'+ch.row)||'').trim().toUpperCase() === 'SI';
       const incluyePW = String(cell(ws, 'F'+ch.row)||'').trim().toUpperCase() === 'SI';
-      return {label: ch.label, costoFinanc, costoAcredit, incluyeTN, incluyePW};
+      return {label: ch.label, costoFinanc, costoAcredit, incluyeTN, incluyePW, principal: ch.principal};
     });
 
     const rubros = [];
@@ -364,7 +360,7 @@ function calcular(){
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
 
-  PARAMS.channels.forEach(ch => {
+  function fila(ch){
     const com = comisionCanal(ch);
     const denom = 1 - margenObj - iibb - comInd;
     let pvp = 0, redondeado = 0, margenReal = 0;
@@ -374,21 +370,30 @@ function calcular(){
       const base = pvp/(1+ivaVentas);
       margenReal = (base - pvp*com - base*iibb - base*comInd - costoTotal) / base;
     }
-
-    let pillClass = 'bad';
-    if(margenReal >= rubroSel.obj) pillClass = 'ok';
-    else if(margenReal >= rubroSel.min) pillClass = 'warn';
-
     const tr = document.createElement('tr');
+    if(!ch.principal) tr.className = 'hidden-row';
     tr.innerHTML = `
       <td>${ch.label}</td>
       <td class="num">${(com*100).toFixed(2)}%</td>
       <td class="num">$${pvp.toLocaleString('es-AR',{maximumFractionDigits:0})}</td>
       <td class="num">$${redondeado.toLocaleString('es-AR')}</td>
-      <td class="num"><span class="pill ${pillClass}">${(margenReal*100).toFixed(1)}%</span></td>
+      <td class="num">${(margenReal*100).toFixed(1)}%</td>
     `;
-    tbody.appendChild(tr);
-  });
+    return tr;
+  }
+
+  PARAMS.channels.filter(ch => ch.principal).forEach(ch => tbody.appendChild(fila(ch)));
+  PARAMS.channels.filter(ch => !ch.principal).forEach(ch => tbody.appendChild(fila(ch)));
+
+  const hiddenRows = document.querySelectorAll('.hidden-row');
+  hiddenRows.forEach(r => r.style.display = verMasAbierto ? '' : 'none');
+}
+
+let verMasAbierto = false;
+function toggleVerMas(){
+  verMasAbierto = !verMasAbierto;
+  document.querySelectorAll('.hidden-row').forEach(r => r.style.display = verMasAbierto ? '' : 'none');
+  document.getElementById('btnVerMas').textContent = verMasAbierto ? 'Ver menos ▲' : 'Ver más medios de pago ▼';
 }
 
 cargarParametros();
