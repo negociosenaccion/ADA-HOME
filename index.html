@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ada Home — Calculadora de Precios</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --clay:#9D9476;
+    --clay-dark:#7d765d;
+    --ink:#2b2822;
+    --paper:#faf8f4;
+    --card:#ffffff;
+    --line:#e5e0d5;
+    --ok:#4a7c59;
+    --ok-bg:#e9f2ea;
+    --warn:#a9772f;
+    --warn-bg:#faf1e0;
+    --bad:#a13f3f;
+    --bad-bg:#f8e9e9;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI', system-ui, -apple-system, sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.45;
+  }
+  header{
+    background:var(--clay);
+    color:#fff;
+    padding:28px 24px 24px;
+  }
+  header h1{
+    margin:0 0 4px;
+    font-size:1.5rem;
+    font-weight:700;
+    letter-spacing:.2px;
+  }
+  header p{
+    margin:0;
+    opacity:.9;
+    font-size:.9rem;
+  }
+  main{
+    max-width:960px;
+    margin:0 auto;
+    padding:24px 16px 60px;
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:20px;
+    margin-bottom:20px;
+  }
+  .card h2{
+    margin:0 0 16px;
+    font-size:1.05rem;
+    color:var(--clay-dark);
+    border-bottom:2px solid var(--line);
+    padding-bottom:8px;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(200px,1fr));
+    gap:14px;
+  }
+  label{
+    display:block;
+    font-size:.8rem;
+    font-weight:600;
+    margin-bottom:5px;
+    color:#5b5646;
+  }
+  input, select{
+    width:100%;
+    padding:9px 10px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-size:.95rem;
+    background:#fff;
+    color:var(--ink);
+  }
+  input:focus, select:focus{
+    outline:2px solid var(--clay);
+    outline-offset:1px;
+  }
+  .toggle{
+    display:flex;
+    gap:8px;
+    margin-bottom:16px;
+  }
+  .toggle button{
+    flex:1;
+    padding:10px;
+    border:1px solid var(--clay);
+    background:#fff;
+    color:var(--clay-dark);
+    border-radius:6px;
+    font-weight:600;
+    cursor:pointer;
+    font-size:.9rem;
+  }
+  .toggle button.active{
+    background:var(--clay);
+    color:#fff;
+  }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:.88rem;
+  }
+  th, td{
+    text-align:left;
+    padding:9px 8px;
+    border-bottom:1px solid var(--line);
+  }
+  th{
+    font-size:.72rem;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    color:#7a7460;
+  }
+  td.num, th.num{ text-align:right; }
+  .pill{
+    display:inline-block;
+    padding:2px 9px;
+    border-radius:20px;
+    font-weight:700;
+    font-size:.82rem;
+  }
+  .pill.ok{ background:var(--ok-bg); color:var(--ok); }
+  .pill.warn{ background:var(--warn-bg); color:var(--warn); }
+  .pill.bad{ background:var(--bad-bg); color:var(--bad); }
+  .status{
+    font-size:.82rem;
+    padding:10px 14px;
+    border-radius:8px;
+    margin-bottom:18px;
+  }
+  .status.ok{ background:var(--ok-bg); color:var(--ok); }
+  .status.bad{ background:var(--bad-bg); color:var(--bad); }
+  .foot-note{
+    font-size:.78rem;
+    color:#8a8471;
+    margin-top:10px;
+  }
+  .group-label{
+    font-weight:700;
+    color:var(--clay-dark);
+    padding-top:14px !important;
+    border-bottom:none !important;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Ada Home — Calculadora de Precio Sugerido</h1>
+  <p>Ingresá el costo del producto y obtené el precio de venta por cada medio de pago.</p>
+</header>
+
+<main>
+  <div id="status" class="status">Cargando parámetros…</div>
+
+  <div class="card">
+    <h2>Tipo de facturación</h2>
+    <div class="toggle">
+      <button id="btnSas" class="active" onclick="setModo('sas')">Sociedad (SAS)</button>
+      <button id="btnMono" onclick="setModo('mono')">Monotributo</button>
+    </div>
+
+    <h2>Datos del producto</h2>
+    <div class="grid">
+      <div>
+        <label for="costo">Costo compra neto (sin IVA)</label>
+        <input type="number" id="costo" value="400000" min="0" oninput="calcular()">
+      </div>
+      <div>
+        <label for="rubro">Rubro</label>
+        <select id="rubro" onchange="aplicarRubro()"></select>
+      </div>
+      <div>
+        <label for="margen">Margen objetivo %</label>
+        <input type="number" id="margen" value="40" min="0" max="95" step="0.5" oninput="calcular()">
+      </div>
+      <div>
+        <label for="fletePct">Flete + embalaje (% sobre costo)</label>
+        <input type="number" id="fletePct" value="10" min="0" step="0.5" oninput="calcular()">
+      </div>
+      <div>
+        <label for="envio">Envío al cliente ($, si es gratis para el comprador)</label>
+        <input type="number" id="envio" value="0" min="0" oninput="calcular()">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Precio sugerido por medio de pago</h2>
+    <table id="tabla">
+      <thead>
+        <tr>
+          <th>Canal / Modalidad</th>
+          <th class="num">Comisión</th>
+          <th class="num">PVP sugerido</th>
+          <th class="num">Redondeado $100</th>
+          <th class="num">Margen real</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <p class="foot-note">Verde: cumple el margen objetivo del rubro. Amarillo: por debajo del objetivo pero por encima del mínimo. Rojo: por debajo del margen mínimo — no vender a ese precio por ese medio.</p>
+  </div>
+</main>
+
+<script>
+let PARAMS = null;
+let modo = 'sas';
+
+const CHANNEL_ROWS = [
+  {label:"Pago Nube 2 cuotas (7 días)", row:29},
+  {label:"Pago Nube 3 cuotas (7 días)", row:30},
+  {label:"Pago Nube 6 cuotas (7 días)", row:31},
+  {label:"Pago Nube 9 cuotas (7 días)", row:32},
+  {label:"Pago Nube 12 cuotas (7 días)", row:33},
+  {label:"Transferencia Pago Nube (2 días)", row:34},
+  {label:"Mercado Pago 2 cuotas", row:35},
+  {label:"Mercado Pago 3 cuotas", row:36},
+  {label:"Mercado Pago 6 cuotas", row:37},
+  {label:"MODO 2 cuotas", row:38},
+  {label:"MODO 3 cuotas", row:39},
+  {label:"MODO 6 cuotas", row:40},
+  {label:"Efectivo / Transf. directa (showroom)", row:41},
+  {label:"Payway 0 cuotas (showroom)", row:42},
+  {label:"Payway 3 cuotas (showroom)", row:43},
+  {label:"Payway 6 cuotas (showroom)", row:44},
+];
+
+const ROWS = {
+  ivaVentasSas: 6, iibbSas: 7, comIndSas: 8,
+  ivaVentasMono: 12, ivaComprasMono: 13, iibbMono: 14, comIndMono: 15,
+  tnComision: 19, tnIva: 20,
+  pwComision: 24, pwIva: 25,
+  rubrosStart: 48, rubrosEnd: 52,
+  fletePct: 55
+};
+
+function cell(ws, addr){
+  const c = ws[addr];
+  return c ? c.v : undefined;
+}
+
+async function cargarParametros(){
+  const statusEl = document.getElementById('status');
+  try{
+    const res = await fetch('./parametros.xlsx', {cache:'no-store'});
+    if(!res.ok) throw new Error('no encontrado');
+    const buf = await res.arrayBuffer();
+    const wb = XLSX.read(buf, {type:'array'});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+
+    const g = (row) => Number(cell(ws, 'B'+row)) || 0;
+
+    const channels = CHANNEL_ROWS.map(ch => {
+      const costoFinanc = Number(cell(ws, 'C'+ch.row)) || 0;
+      const costoAcredit = Number(cell(ws, 'D'+ch.row)) || 0;
+      const incluyeTN = String(cell(ws, 'E'+ch.row)||'').trim().toUpperCase() === 'SI';
+      const incluyePW = String(cell(ws, 'F'+ch.row)||'').trim().toUpperCase() === 'SI';
+      return {label: ch.label, costoFinanc, costoAcredit, incluyeTN, incluyePW};
+    });
+
+    const rubros = [];
+    for(let r = ROWS.rubrosStart; r <= ROWS.rubrosEnd; r++){
+      const nombre = cell(ws, 'A'+r);
+      if(!nombre) continue;
+      rubros.push({
+        nombre: String(nombre).trim(),
+        obj: Number(cell(ws,'B'+r))||0,
+        min: Number(cell(ws,'C'+r))||0
+      });
+    }
+
+    PARAMS = {
+      ivaVentasSas: g(ROWS.ivaVentasSas), iibbSas: g(ROWS.iibbSas), comIndSas: g(ROWS.comIndSas),
+      ivaVentasMono: g(ROWS.ivaVentasMono), ivaComprasMono: g(ROWS.ivaComprasMono),
+      iibbMono: g(ROWS.iibbMono), comIndMono: g(ROWS.comIndMono),
+      tnComision: g(ROWS.tnComision), tnIva: g(ROWS.tnIva),
+      pwComision: g(ROWS.pwComision), pwIva: g(ROWS.pwIva),
+      fletePctDefault: g(ROWS.fletePct),
+      channels, rubros
+    };
+
+    document.getElementById('fletePct').value = (PARAMS.fletePctDefault*100).toFixed(1);
+    poblarRubros();
+    statusEl.textContent = 'Parámetros cargados correctamente desde parametros.xlsx.';
+    statusEl.className = 'status ok';
+    calcular();
+  }catch(e){
+    statusEl.textContent = 'No se pudo leer parametros.xlsx (¿el sitio está corriendo desde un servidor/Netlify, y el archivo está en la misma carpeta que index.html?). Detalle: ' + e.message;
+    statusEl.className = 'status bad';
+  }
+}
+
+function poblarRubros(){
+  const sel = document.getElementById('rubro');
+  sel.innerHTML = '';
+  PARAMS.rubros.forEach((r,i)=>{
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = r.nombre;
+    sel.appendChild(opt);
+  });
+  aplicarRubro();
+}
+
+function aplicarRubro(){
+  const i = Number(document.getElementById('rubro').value);
+  const r = PARAMS.rubros[i];
+  if(r) document.getElementById('margen').value = (r.obj*100).toFixed(1);
+  calcular();
+}
+
+function setModo(m){
+  modo = m;
+  document.getElementById('btnSas').classList.toggle('active', m==='sas');
+  document.getElementById('btnMono').classList.toggle('active', m==='mono');
+  calcular();
+}
+
+function comisionCanal(ch){
+  let com = ch.costoFinanc + ch.costoFinanc*0.21 + ch.costoAcredit + ch.costoAcredit*0.21;
+  if(ch.incluyeTN) com += PARAMS.tnComision * (1 + PARAMS.tnIva);
+  if(ch.incluyePW) com += PARAMS.pwComision * (1 + PARAMS.pwIva);
+  return com;
+}
+
+function calcular(){
+  if(!PARAMS) return;
+  const costo = Number(document.getElementById('costo').value) || 0;
+  const fletePct = (Number(document.getElementById('fletePct').value) || 0) / 100;
+  const envio = Number(document.getElementById('envio').value) || 0;
+  const margenObj = (Number(document.getElementById('margen').value) || 0) / 100;
+  const rubroSel = PARAMS.rubros[Number(document.getElementById('rubro').value)] || {obj:margenObj, min:0};
+
+  const flete = costo * fletePct;
+  const embalaje = 0;
+
+  let ivaVentas, iibb, comInd, costoTotal;
+  if(modo === 'sas'){
+    ivaVentas = PARAMS.ivaVentasSas;
+    iibb = PARAMS.iibbSas;
+    comInd = PARAMS.comIndSas;
+    costoTotal = costo + flete + embalaje + envio;
+  } else {
+    ivaVentas = PARAMS.ivaVentasMono;
+    iibb = PARAMS.iibbMono;
+    comInd = PARAMS.comIndMono;
+    costoTotal = costo * (1 + PARAMS.ivaComprasMono) + flete + embalaje + envio;
+  }
+
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+
+  PARAMS.channels.forEach(ch => {
+    const com = comisionCanal(ch);
+    const denom = 1 - margenObj - iibb - comInd;
+    let pvp = 0, redondeado = 0, margenReal = 0;
+    if(denom > 0 && com < 1){
+      pvp = (costoTotal / denom) * (1 + ivaVentas) / (1 - com);
+      redondeado = Math.ceil(pvp/100)*100;
+      const base = pvp/(1+ivaVentas);
+      margenReal = (base - pvp*com - base*iibb - base*comInd - costoTotal) / base;
+    }
+
+    let pillClass = 'bad';
+    if(margenReal >= rubroSel.obj) pillClass = 'ok';
+    else if(margenReal >= rubroSel.min) pillClass = 'warn';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ch.label}</td>
+      <td class="num">${(com*100).toFixed(2)}%</td>
+      <td class="num">$${pvp.toLocaleString('es-AR',{maximumFractionDigits:0})}</td>
+      <td class="num">$${redondeado.toLocaleString('es-AR')}</td>
+      <td class="num"><span class="pill ${pillClass}">${(margenReal*100).toFixed(1)}%</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+cargarParametros();
+</script>
+</body>
+</html>
