@@ -3,400 +3,436 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ada Home — Calculadora de Precios</title>
+<title>Ada Home — Calculadora de Precio Sugerido</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
-    --clay:#9D9476;
-    --clay-dark:#7d765d;
-    --ink:#2b2822;
-    --paper:#faf8f4;
-    --card:#ffffff;
-    --line:#e5e0d5;
-    --ok:#4a7c59;
-    --ok-bg:#e9f2ea;
-    --warn:#a9772f;
-    --warn-bg:#faf1e0;
-    --bad:#a13f3f;
-    --bad-bg:#f8e9e9;
-    --radius:10px;
+    --accent:#9D9476;
+    --accent-dark:#7C7458;
+    --ink:#332F29;
+    --text:#3A362F;
+    --text-secondary:#6B6656;
+    --bg:#F5F3ED;
+    --card:#FFFFFF;
+    --border:#E3DFD3;
+    --good-bg:#E7F3EA; --good-text:#2E7D4F;
+    --warn-bg:#FCF1DE; --warn-text:#9A6B0C;
+    --bad-bg:#FBEAEA;  --bad-text:#B23A2E;
+    --info-bg:#EAF3EA; --info-text:#2E7D4F;
   }
   *{box-sizing:border-box;}
   body{
     margin:0;
-    font-family:'Segoe UI', system-ui, -apple-system, sans-serif;
-    background:var(--paper);
-    color:var(--ink);
-    line-height:1.45;
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
   }
-  header{
-    background:var(--clay);
-    color:#fff;
-    padding:28px 24px 24px;
+  .topbar{height:6px;background:var(--ink);}
+  header{background:var(--accent);color:#fff;padding:2.5rem 2rem 2rem;}
+  header h1{margin:0 0 6px;font-size:30px;font-weight:700;}
+  header p{margin:0;font-size:15px;opacity:.92;}
+  main{max-width:960px;margin:0 auto;padding:1.5rem 2rem 4rem;}
+  .banner{border-radius:10px;padding:14px 18px;font-size:14px;margin-bottom:1.25rem;}
+  .banner.info{background:var(--info-bg);color:var(--info-text);}
+  .banner.warn{background:var(--warn-bg);color:var(--warn-text);}
+  .banner.bad{background:var(--bad-bg);color:var(--bad-text);}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.75rem 2rem;margin-bottom:1.25rem;}
+  .card h2{margin:0 0 4px;font-size:19px;font-weight:700;color:var(--accent-dark);}
+  .rule{border:none;border-top:1px solid var(--border);margin:12px 0 20px;}
+  .tabs{display:flex;gap:10px;margin-bottom:1.5rem;}
+  .tab{flex:1;padding:14px;border-radius:10px;border:1px solid var(--accent);background:#fff;color:var(--accent-dark);font-weight:700;font-size:15px;cursor:pointer;}
+  .tab.active{background:var(--accent);color:#fff;}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;}
+  .grid.g2{grid-template-columns:repeat(2,1fr);}
+  .field label{display:block;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;}
+  .field input, .field select{
+    width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;
+    font-size:15px;color:var(--text);background:#fff;
   }
-  header h1{
-    margin:0 0 4px;
-    font-size:1.5rem;
-    font-weight:700;
-    letter-spacing:.2px;
+  .field input:focus, .field select:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  .upload-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .upload-btn{
+    background:#fff;border:1px solid var(--accent);color:var(--accent-dark);
+    padding:10px 16px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;
   }
-  header p{
-    margin:0;
-    opacity:.9;
-    font-size:.9rem;
+  .upload-btn:hover{background:var(--bg);}
+  table{width:100%;border-collapse:collapse;font-size:14.5px;}
+  thead th{
+    text-align:left;font-size:11.5px;letter-spacing:.03em;text-transform:uppercase;
+    color:var(--accent-dark);font-weight:700;padding:0 0 10px;border-bottom:1px solid var(--border);
   }
-  main{
-    max-width:960px;
-    margin:0 auto;
-    padding:24px 16px 60px;
-  }
-  .card{
-    background:var(--card);
-    border:1px solid var(--line);
-    border-radius:var(--radius);
-    padding:20px;
-    margin-bottom:20px;
-  }
-  .card h2{
-    margin:0 0 16px;
-    font-size:1.05rem;
-    color:var(--clay-dark);
-    border-bottom:2px solid var(--line);
-    padding-bottom:8px;
-  }
-  .grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(200px,1fr));
-    gap:14px;
-  }
-  label{
-    display:block;
-    font-size:.8rem;
-    font-weight:600;
-    margin-bottom:5px;
-    color:#5b5646;
-  }
-  input, select{
-    width:100%;
-    padding:9px 10px;
-    border:1px solid var(--line);
-    border-radius:6px;
-    font-size:.95rem;
-    background:#fff;
-    color:var(--ink);
-  }
-  input:focus, select:focus{
-    outline:2px solid var(--clay);
-    outline-offset:1px;
-  }
-  .toggle{
-    display:flex;
-    gap:8px;
-    margin-bottom:16px;
-  }
-  .toggle button{
-    flex:1;
-    padding:10px;
-    border:1px solid var(--clay);
-    background:#fff;
-    color:var(--clay-dark);
-    border-radius:6px;
-    font-weight:600;
-    cursor:pointer;
-    font-size:.9rem;
-  }
-  .toggle button.active{
-    background:var(--clay);
-    color:#fff;
-  }
-  table{
-    width:100%;
-    border-collapse:collapse;
-    font-size:.88rem;
-  }
-  th, td{
-    text-align:left;
-    padding:9px 8px;
-    border-bottom:1px solid var(--line);
-  }
-  th{
-    font-size:.72rem;
-    text-transform:uppercase;
-    letter-spacing:.04em;
-    color:#7a7460;
-  }
-  td.num, th.num{ text-align:right; }
-  .hidden-row{ display:none; }
-  .status{
-    font-size:.82rem;
-    padding:10px 14px;
-    border-radius:8px;
-    margin-bottom:18px;
-  }
-  .status.ok{ background:var(--ok-bg); color:var(--ok); }
-  .status.bad{ background:var(--bad-bg); color:var(--bad); }
-  .foot-note{
-    font-size:.78rem;
-    color:#8a8471;
-    margin-top:10px;
-  }
-  .group-label{
-    font-weight:700;
-    color:var(--clay-dark);
-    padding-top:14px !important;
-    border-bottom:none !important;
-  }
+  tbody td{padding:13px 0;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}
+  .chan-name{font-weight:600;}
+  .chan-sub{font-size:12px;color:var(--text-secondary);margin-top:2px;}
+  .badge{display:inline-block;padding:5px 12px;border-radius:8px;font-weight:700;font-size:13.5px;}
+  .anchor-tag{font-size:11px;background:var(--accent);color:#fff;padding:2px 8px;border-radius:6px;margin-left:8px;vertical-align:2px;}
+  .toggle-more{width:100%;margin-top:16px;padding:12px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--accent-dark);font-weight:700;cursor:pointer;font-size:14px;}
+  .hero-price{background:var(--bg);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;}
+  .hero-price .lbl{font-size:13px;color:var(--accent-dark);font-weight:700;margin-bottom:4px;}
+  .hero-price .val{font-size:32px;font-weight:700;color:var(--ink);}
+  .hero-price .chk{font-size:13px;color:var(--text-secondary);margin-top:4px;}
+  @media (max-width:720px){ .grid{grid-template-columns:1fr 1fr;} }
 </style>
 </head>
 <body>
+<div class="topbar"></div>
 <header>
   <h1>Ada Home — Calculadora de Precio Sugerido</h1>
   <p>Ingresá el costo del producto y obtené el precio de venta por cada medio de pago.</p>
 </header>
 
 <main>
-  <div id="status" class="status">Cargando parámetros…</div>
+  <div id="status-banner" class="banner warn">Usando parámetros de referencia. Subí tu Parámetros.xlsx para actualizar comisiones e impuestos.</div>
+
+  <div class="card">
+    <div class="upload-row">
+      <label class="upload-btn" for="file-input">Cargar Parámetros.xlsx</label>
+      <input type="file" id="file-input" accept=".xlsx" style="display:none;">
+      <span id="file-name" style="font-size:13px;color:var(--text-secondary);"></span>
+    </div>
+  </div>
 
   <div class="card">
     <h2>Tipo de facturación</h2>
-    <div class="toggle">
-      <button id="btnSas" class="active" onclick="setModo('sas')">Sociedad (SAS)</button>
-      <button id="btnMono" onclick="setModo('mono')">Monotributo</button>
+    <hr class="rule">
+    <div class="tabs">
+      <button class="tab active" id="tab-sas">Sociedad (SAS)</button>
+      <button class="tab" id="tab-mono">Monotributo</button>
     </div>
 
     <h2>Datos del producto</h2>
+    <hr class="rule">
     <div class="grid">
-      <div>
-        <label for="costo">Costo compra neto (sin IVA)</label>
-        <input type="number" id="costo" value="400000" min="0" oninput="calcular()">
+      <div class="field">
+        <label>Costo compra neto (sin IVA)</label>
+        <input type="number" id="costo" value="400000">
       </div>
-      <div>
-        <label for="rubro">Rubro</label>
-        <select id="rubro" onchange="aplicarRubro()"></select>
+      <div class="field">
+        <label>Rubro</label>
+        <select id="rubro"></select>
       </div>
-      <div>
-        <label for="margen">Margen objetivo %</label>
-        <input type="number" id="margen" value="40" min="0" max="95" step="0.5" oninput="calcular()">
+      <div class="field">
+        <label>Margen objetivo %</label>
+        <input type="number" id="margen" value="45" step="0.1">
       </div>
-      <div>
-        <label for="fletePct">Flete + embalaje (% sobre costo)</label>
-        <input type="number" id="fletePct" value="10" min="0" step="0.5" oninput="calcular()">
+      <div class="field">
+        <label>Flete + embalaje (% sobre costo)</label>
+        <input type="number" id="flete" value="10" step="0.1">
       </div>
-      <div>
-        <label for="envio">Envío al cliente ($, si es gratis para el comprador)</label>
-        <input type="number" id="envio" value="0" min="0" oninput="calcular()">
+      <div class="field">
+        <label>Envío al cliente ($, si es gratis para el comprador)</label>
+        <input type="number" id="envio" value="0">
+      </div>
+      <div class="field">
+        <label>Descuento efectivo (%)</label>
+        <input type="number" id="descEfectivo" value="20" step="0.1">
+      </div>
+      <div class="field">
+        <label>Descuento transferencia (%)</label>
+        <input type="number" id="descTransf" value="15" step="0.1">
       </div>
     </div>
   </div>
 
   <div class="card">
-    <h2>Precio sugerido por medio de pago</h2>
-    <table id="tabla">
-      <thead>
-        <tr>
-          <th>Canal / Modalidad</th>
-          <th class="num">Comisión</th>
-          <th class="num">PVP sugerido</th>
-          <th class="num">Redondeado $100</th>
-          <th class="num">Margen real</th>
-        </tr>
-      </thead>
-      <tbody id="tbody"></tbody>
-    </table>
-    <div style="text-align:center; margin-top:14px;">
-      <button id="btnVerMas" onclick="toggleVerMas()" style="background:none;border:1px solid var(--clay);color:var(--clay-dark);padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:.85rem;">Ver más medios de pago ▼</button>
+    <div class="hero-price">
+      <div class="lbl" id="anchor-label">Precio de lista sugerido · Tienda Nube 6 cuotas sin interés</div>
+      <div class="val" id="pvp-out">$0</div>
+      <div class="chk" id="pvp-check"></div>
     </div>
-    <p class="foot-note">El margen real baja a medida que aumentan las cuotas: es más alto en efectivo/transferencia y más bajo en los planes con más financiación.</p>
+
+    <h2>Precio sugerido por medio de pago</h2>
+    <hr class="rule">
+    <table>
+      <thead>
+        <tr><th>Canal / Modalidad</th><th>Comisión</th><th>PVP sugerido</th><th>Redondeado $100</th><th>Margen real</th></tr>
+      </thead>
+      <tbody id="rows-activos"></tbody>
+    </table>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:12.5px;color:var(--text-secondary);">
+      <span><span class="badge" style="background:var(--bad-bg);color:var(--bad-text);padding:2px 8px;">&lt;15%</span> revisar urgente</span>
+      <span><span class="badge" style="background:var(--warn-bg);color:var(--warn-text);padding:2px 8px;">15–30%</span> ajustado</span>
+      <span><span class="badge" style="background:var(--good-bg);color:var(--good-text);padding:2px 8px;">≥30%</span> saludable</span>
+    </div>
+    <button class="toggle-more" id="toggle-more">Ver más medios de pago ▾</button>
+    <table style="display:none;margin-top:8px;" id="table-inactivos">
+      <tbody id="rows-inactivos"></tbody>
+    </table>
   </div>
 </main>
 
 <script>
-let PARAMS = null;
-let modo = 'sas';
-
-const CHANNEL_ROWS = [
-  // Principales: se muestran siempre
-  {label:"Efectivo / Transf. directa (showroom)", row:41, principal:true},
-  {label:"Transferencia Pago Nube (2 días)", row:34, principal:true},
-  {label:"Pago Nube 3 cuotas (7 días)", row:30, principal:true},
-  {label:"Pago Nube 6 cuotas (7 días)", row:31, principal:true},
-  {label:"Payway 0 cuotas (showroom)", row:42, principal:true},
-  {label:"Payway 3 cuotas (showroom)", row:43, principal:true},
-  {label:"Payway 6 cuotas (showroom)", row:44, principal:true},
-  // Resto: detrás de "Ver más"
-  {label:"Pago Nube 2 cuotas (7 días)", row:29, principal:false},
-  {label:"Pago Nube 9 cuotas (7 días)", row:32, principal:false},
-  {label:"Pago Nube 12 cuotas (7 días)", row:33, principal:false},
-  {label:"Mercado Pago 2 cuotas", row:35, principal:false},
-  {label:"Mercado Pago 3 cuotas", row:36, principal:false},
-  {label:"Mercado Pago 6 cuotas", row:37, principal:false},
-  {label:"MODO 2 cuotas", row:38, principal:false},
-  {label:"MODO 3 cuotas", row:39, principal:false},
-  {label:"MODO 6 cuotas", row:40, principal:false},
+const rubrosDefault=[
+  {n:'SILLONES Y MUEBLES',obj:0.45,min:0.35},
+  {n:'ILUMINACION',obj:0.50,min:0.40},
+  {n:'PARA DORMITORIOS',obj:0.48,min:0.38},
+  {n:'DECO Y MAS',obj:0.55,min:0.45},
+  {n:'COCINA Y BAZAR',obj:0.55,min:0.43}
 ];
 
-const ROWS = {
-  ivaVentasSas: 6, iibbSas: 7, comIndSas: 8,
-  ivaVentasMono: 12, ivaComprasMono: 13, iibbMono: 14, comIndMono: 15,
-  tnComision: 19, tnIva: 20,
-  pwComision: 24, pwIva: 25,
-  rubrosStart: 48, rubrosEnd: 52,
-  fletePct: 55
+const channelDefs=[
+  {row:23,group:'Pago Nube (14 días)',cuotas:'2 cuotas'},
+  {row:24,group:'Pago Nube (14 días)',cuotas:'3 cuotas'},
+  {row:25,group:'Pago Nube (14 días)',cuotas:'6 cuotas'},
+  {row:26,group:'Pago Nube (7 días)',cuotas:'2 cuotas'},
+  {row:27,group:'Pago Nube (7 días)',cuotas:'3 cuotas'},
+  {row:28,group:'Pago Nube (7 días)',cuotas:'6 cuotas'},
+  {row:29,group:'Pago Nube (7 días)',cuotas:'9 cuotas'},
+  {row:30,group:'Pago Nube (7 días)',cuotas:'12 cuotas'},
+  {row:31,group:'Transferencia Pago Nube (2 días)',cuotas:'',esTransf:true},
+  {row:32,group:'Mercado Pago',cuotas:'2 cuotas'},
+  {row:33,group:'Mercado Pago',cuotas:'3 cuotas'},
+  {row:34,group:'Mercado Pago',cuotas:'6 cuotas'},
+  {row:35,group:'MODO',cuotas:'2 cuotas'},
+  {row:36,group:'MODO',cuotas:'3 cuotas'},
+  {row:37,group:'MODO',cuotas:'6 cuotas'},
+  {row:39,group:'Payway (10 días hábiles)',cuotas:'3 cuotas'},
+  {row:40,group:'Payway (10 días hábiles)',cuotas:'6 cuotas'}
+];
+
+const defaultH={23:0.131527,24:0.158994,25:0.260029,26:0.155969,27:0.188639,28:0.214049,
+  29:0.270919,30:0.316899,31:0.0363,32:0.134915,33:0.343705,34:0.186945,35:0.097889,
+  36:0.077319,37:0.066429,39:0.107811,40:0.187792};
+const defaultActivo={23:false,24:false,25:false,26:false,27:true,28:true,29:false,30:false,
+  31:true,32:true,33:false,34:false,35:false,36:false,37:false,39:true,40:true};
+
+let params={
+  ivaSoc:0.21, iibbSoc:0.04, comIndSoc:0.04,
+  ivaMono:0.0, ivaComprasNoRec:0.0, iibbMono:0.04, comIndMono:0.0,
+  rubros: rubrosDefault,
+  comm: {...defaultH},
+  activo: {...defaultActivo}
 };
+let facturacion='sas';
 
-function cell(ws, addr){
-  const c = ws[addr];
-  return c ? c.v : undefined;
+const $=id=>document.getElementById(id);
+const money=v=>isFinite(v)?'$'+Math.round(v).toLocaleString('es-AR'):'—';
+const pctFmt=v=>isFinite(v)?(v*100).toFixed(1).replace('.',',')+'%':'—';
+
+function fillRubroSelect(){
+  const sel=$('rubro');
+  const current=sel.value;
+  sel.innerHTML=params.rubros.map((r,i)=>`<option value="${i}">${r.n}</option>`).join('');
+  if(current!=='' && params.rubros[current]) sel.value=current; else sel.value='0';
 }
 
-async function cargarParametros(){
-  const statusEl = document.getElementById('status');
-  try{
-    const res = await fetch('./parametros.xlsx', {cache:'no-store'});
-    if(!res.ok) throw new Error('no encontrado');
-    const buf = await res.arrayBuffer();
-    const wb = XLSX.read(buf, {type:'array'});
-    const ws = wb.Sheets[wb.SheetNames[0]];
+function labelFor(ch){
+  if(ch.esTransf) return ch.group;
+  return `${ch.group} ${ch.cuotas}`.trim();
+}
 
-    const g = (row) => Number(cell(ws, 'B'+row)) || 0;
+function anchorRow(){
+  const c28=params.activo[28], c25=params.activo[25];
+  if(c28) return 28;
+  if(c25) return 25;
+  return 28;
+}
 
-    const channels = CHANNEL_ROWS.map(ch => {
-      const costoFinanc = Number(cell(ws, 'C'+ch.row)) || 0;
-      const costoAcredit = Number(cell(ws, 'D'+ch.row)) || 0;
-      const incluyeTN = String(cell(ws, 'E'+ch.row)||'').trim().toUpperCase() === 'SI';
-      const incluyePW = String(cell(ws, 'F'+ch.row)||'').trim().toUpperCase() === 'SI';
-      return {label: ch.label, costoFinanc, costoAcredit, incluyeTN, incluyePW, principal: ch.principal};
-    });
+function statusColors(marginPct){
+  if(!isFinite(marginPct)) return {bg:'var(--bad-bg)',fg:'var(--bad-text)'};
+  if(marginPct>=0.30-0.0005) return {bg:'var(--good-bg)',fg:'var(--good-text)'};
+  if(marginPct>=0.15-0.0005) return {bg:'var(--warn-bg)',fg:'var(--warn-text)'};
+  return {bg:'var(--bad-bg)',fg:'var(--bad-text)'};
+}
 
-    const rubros = [];
-    for(let r = ROWS.rubrosStart; r <= ROWS.rubrosEnd; r++){
-      const nombre = cell(ws, 'A'+r);
-      if(!nombre) continue;
-      rubros.push({
-        nombre: String(nombre).trim(),
-        obj: Number(cell(ws,'B'+r))||0,
-        min: Number(cell(ws,'C'+r))||0
+function calcPVP(cmv,margen,comm){
+  if(facturacion==='sas'){
+    const iva=params.ivaSoc, iibb=params.iibbSoc, ci=params.comIndSoc;
+    const denom=(1-margen-iibb-ci)-comm*(1+iva);
+    return denom>0? cmv*(1+iva)/denom : NaN;
+  }else{
+    const iibb=params.iibbMono, ci=params.comIndMono;
+    const denom=1-margen-iibb-ci-comm;
+    return denom>0? cmv/denom : NaN;
+  }
+}
+
+function calcMargin(price,cmv,comm){
+  if(facturacion==='sas'){
+    const iva=params.ivaSoc, iibb=params.iibbSoc, ci=params.comIndSoc;
+    const n=price/(1+iva);
+    const marginPesos=n-price*comm-n*iibb-n*ci-cmv;
+    return n>0? marginPesos/n : NaN;
+  }else{
+    const iibb=params.iibbMono, ci=params.comIndMono;
+    const marginPesos=price-price*comm-price*iibb-price*ci-cmv;
+    return price>0? marginPesos/price : NaN;
+  }
+}
+
+function rowsFor(defs,pvp,cmv,rubro,descEf,descTr){
+  return defs.map(ch=>{
+    const comm=params.comm[ch.row]||0;
+    const desc=ch.esTransf ? descTr : 0;
+    const label=labelFor(ch);
+    const price=pvp*(1-desc);
+    const marginPct=calcMargin(price,cmv,comm);
+    const s=statusColors(marginPct);
+    const anchorTag=ch.row===anchorRow()?'<span class="anchor-tag">Ancla</span>':'';
+    const descSub=desc>0?`<div class="chan-sub">${Math.round(desc*100)}% off sobre lista</div>`:'';
+    return `<tr>
+      <td><span class="chan-name">${label}${anchorTag}</span>${descSub}</td>
+      <td>${pctFmt(comm)}</td>
+      <td>${money(price)}</td>
+      <td>${money(Math.ceil(price/100)*100)}</td>
+      <td><span class="badge" style="background:${s.bg};color:${s.fg};">${pctFmt(marginPct)}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function discountRowsHTML(pvp,cmv,rubro,descEf,descTr){
+  const rows=[
+    {label:'Efectivo (showroom)',comm:0,desc:descEf},
+    {label:'Transferencia directa (showroom)',comm:0,desc:descTr},
+  ];
+  return rows.map(r=>{
+    const price=pvp*(1-r.desc);
+    const marginPct=calcMargin(price,cmv,r.comm);
+    const s=statusColors(marginPct);
+    return `<tr>
+      <td><span class="chan-name">${r.label}</span><div class="chan-sub">${Math.round(r.desc*100)}% off sobre lista</div></td>
+      <td>${pctFmt(r.comm)}</td>
+      <td>${money(price)}</td>
+      <td>${money(Math.ceil(price/100)*100)}</td>
+      <td><span class="badge" style="background:${s.bg};color:${s.fg};">${pctFmt(marginPct)}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function recalc(){
+  const costo=parseFloat($('costo').value)||0;
+  const fletePct=(parseFloat($('flete').value)||0)/100;
+  const envio=parseFloat($('envio').value)||0;
+  const margen=(parseFloat($('margen').value)||0)/100;
+  const descEf=(parseFloat($('descEfectivo').value)||0)/100;
+  const descTr=(parseFloat($('descTransf').value)||0)/100;
+  const rubroIdx=parseInt($('rubro').value)||0;
+  const rubro=params.rubros[rubroIdx]||rubrosDefault[0];
+
+  let cmv;
+  if(facturacion==='sas'){
+    cmv = costo + costo*fletePct + envio;
+  }else{
+    cmv = costo*(1+params.ivaComprasNoRec) + costo*fletePct + envio;
+  }
+
+  const aRow=anchorRow();
+  const commAnchor=params.comm[aRow]||0;
+  const pvpRaw=calcPVP(cmv,margen,commAnchor);
+  const pvp=isFinite(pvpRaw)&&pvpRaw>0?Math.ceil(pvpRaw/100)*100:NaN;
+
+  $('anchor-label').textContent=`Precio de lista sugerido · Tienda Nube 6 cuotas (${aRow===25?'14':'7'} días) sin interés`;
+  $('pvp-out').textContent=money(pvp);
+  if(isFinite(pvp)){
+    const mAnchor=calcMargin(pvp,cmv,commAnchor);
+    $('pvp-check').textContent=`Verificado: te deja ${pctFmt(mAnchor)} de margen en este canal`;
+  }else{
+    $('pvp-check').textContent='Revisá los datos: el margen o la comisión no permiten calcular un precio.';
+  }
+
+  const activos=channelDefs.filter(c=>params.activo[c.row]);
+  const inactivos=channelDefs.filter(c=>!params.activo[c.row]);
+
+  $('rows-activos').innerHTML =
+    discountRowsHTML(pvp,cmv,rubro,descEf,descTr) +
+    rowsFor(activos,pvp,cmv,rubro,descEf,descTr);
+  $('rows-inactivos').innerHTML = rowsFor(inactivos,pvp,cmv,rubro,descEf,descTr);
+}
+
+$('tab-sas').addEventListener('click',()=>{
+  facturacion='sas';
+  $('tab-sas').classList.add('active');
+  $('tab-mono').classList.remove('active');
+  recalc();
+});
+$('tab-mono').addEventListener('click',()=>{
+  facturacion='mono';
+  $('tab-mono').classList.add('active');
+  $('tab-sas').classList.remove('active');
+  recalc();
+});
+['costo','margen','flete','envio','descEfectivo','descTransf'].forEach(id=>{
+  $(id).addEventListener('input',recalc);
+});
+$('rubro').addEventListener('change',()=>{
+  const r=params.rubros[parseInt($('rubro').value)];
+  if(r) $('margen').value=(r.obj*100).toFixed(1);
+  recalc();
+});
+$('toggle-more').addEventListener('click',()=>{
+  const t=$('table-inactivos');
+  const open=t.style.display!=='none';
+  t.style.display=open?'none':'table';
+  $('toggle-more').textContent=open?'Ver más medios de pago ▾':'Ocultar medios de pago inactivos ▴';
+});
+
+function cellVal(ws,addr){
+  const c=ws[addr];
+  return c && typeof c.v==='number' ? c.v : null;
+}
+function cellStr(ws,addr){
+  const c=ws[addr];
+  return c ? String(c.v).trim() : '';
+}
+
+$('file-input').addEventListener('change',(e)=>{
+  const file=e.target.files[0];
+  if(!file) return;
+  $('file-name').textContent=file.name;
+  const reader=new FileReader();
+  reader.onload=(ev)=>{
+    try{
+      const data=new Uint8Array(ev.target.result);
+      const wb=XLSX.read(data,{type:'array'});
+      const ws=wb.Sheets['Parámetros'] || wb.Sheets['Parametros'];
+      if(!ws) throw new Error('No se encontró la hoja "Parámetros" en el archivo.');
+
+      const ivaSoc=cellVal(ws,'B6'), iibbSoc=cellVal(ws,'B8'), comIndSoc=cellVal(ws,'B9');
+      const ivaMono=cellVal(ws,'B53'), ivaComprasNoRec=cellVal(ws,'B54'),
+            iibbMono=cellVal(ws,'B55'), comIndMono=cellVal(ws,'B56');
+
+      const newRubros=[];
+      for(let r=5;r<=9;r++){
+        const n=cellStr(ws,'K'+r);
+        const obj=cellVal(ws,'L'+r);
+        const min=cellVal(ws,'M'+r);
+        if(n && obj!==null && min!==null) newRubros.push({n,obj,min});
+      }
+
+      const newComm={}, newActivo={};
+      channelDefs.forEach(ch=>{
+        const h=cellVal(ws,'H'+ch.row);
+        const iRaw=cellStr(ws,'I'+ch.row).toUpperCase();
+        newComm[ch.row]= h!==null ? h : defaultH[ch.row];
+        newActivo[ch.row]= iRaw.indexOf('SI')===0;
       });
+
+      params={
+        ivaSoc: ivaSoc??params.ivaSoc,
+        iibbSoc: iibbSoc??params.iibbSoc,
+        comIndSoc: comIndSoc??params.comIndSoc,
+        ivaMono: ivaMono??params.ivaMono,
+        ivaComprasNoRec: ivaComprasNoRec??params.ivaComprasNoRec,
+        iibbMono: iibbMono??params.iibbMono,
+        comIndMono: comIndMono??params.comIndMono,
+        rubros: newRubros.length?newRubros:rubrosDefault,
+        comm:newComm, activo:newActivo
+      };
+      fillRubroSelect();
+      $('status-banner').className='banner info';
+      $('status-banner').textContent=`Parámetros actualizados desde ${file.name} — ${new Date().toLocaleString('es-AR')}.`;
+      recalc();
+    }catch(err){
+      $('status-banner').className='banner bad';
+      $('status-banner').textContent='No se pudo leer el archivo: '+err.message;
     }
+  };
+  reader.readAsArrayBuffer(file);
+});
 
-    PARAMS = {
-      ivaVentasSas: g(ROWS.ivaVentasSas), iibbSas: g(ROWS.iibbSas), comIndSas: g(ROWS.comIndSas),
-      ivaVentasMono: g(ROWS.ivaVentasMono), ivaComprasMono: g(ROWS.ivaComprasMono),
-      iibbMono: g(ROWS.iibbMono), comIndMono: g(ROWS.comIndMono),
-      tnComision: g(ROWS.tnComision), tnIva: g(ROWS.tnIva),
-      pwComision: g(ROWS.pwComision), pwIva: g(ROWS.pwIva),
-      fletePctDefault: g(ROWS.fletePct),
-      channels, rubros
-    };
-
-    document.getElementById('fletePct').value = (PARAMS.fletePctDefault*100).toFixed(1);
-    poblarRubros();
-    statusEl.textContent = 'Parámetros cargados correctamente desde parametros.xlsx.';
-    statusEl.className = 'status ok';
-    calcular();
-  }catch(e){
-    statusEl.textContent = 'No se pudo leer parametros.xlsx (¿el sitio está corriendo desde un servidor/Netlify, y el archivo está en la misma carpeta que index.html?). Detalle: ' + e.message;
-    statusEl.className = 'status bad';
-  }
-}
-
-function poblarRubros(){
-  const sel = document.getElementById('rubro');
-  sel.innerHTML = '';
-  PARAMS.rubros.forEach((r,i)=>{
-    const opt = document.createElement('option');
-    opt.value = i;
-    opt.textContent = r.nombre;
-    sel.appendChild(opt);
-  });
-  aplicarRubro();
-}
-
-function aplicarRubro(){
-  const i = Number(document.getElementById('rubro').value);
-  const r = PARAMS.rubros[i];
-  if(r) document.getElementById('margen').value = (r.obj*100).toFixed(1);
-  calcular();
-}
-
-function setModo(m){
-  modo = m;
-  document.getElementById('btnSas').classList.toggle('active', m==='sas');
-  document.getElementById('btnMono').classList.toggle('active', m==='mono');
-  calcular();
-}
-
-function comisionCanal(ch){
-  let com = ch.costoFinanc + ch.costoFinanc*0.21 + ch.costoAcredit + ch.costoAcredit*0.21;
-  if(ch.incluyeTN) com += PARAMS.tnComision * (1 + PARAMS.tnIva);
-  if(ch.incluyePW) com += PARAMS.pwComision * (1 + PARAMS.pwIva);
-  return com;
-}
-
-function calcular(){
-  if(!PARAMS) return;
-  const costo = Number(document.getElementById('costo').value) || 0;
-  const fletePct = (Number(document.getElementById('fletePct').value) || 0) / 100;
-  const envio = Number(document.getElementById('envio').value) || 0;
-  const margenObj = (Number(document.getElementById('margen').value) || 0) / 100;
-  const rubroSel = PARAMS.rubros[Number(document.getElementById('rubro').value)] || {obj:margenObj, min:0};
-
-  const flete = costo * fletePct;
-  const embalaje = 0;
-
-  let ivaVentas, iibb, comInd, costoTotal;
-  if(modo === 'sas'){
-    ivaVentas = PARAMS.ivaVentasSas;
-    iibb = PARAMS.iibbSas;
-    comInd = PARAMS.comIndSas;
-    costoTotal = costo + flete + embalaje + envio;
-  } else {
-    ivaVentas = PARAMS.ivaVentasMono;
-    iibb = PARAMS.iibbMono;
-    comInd = PARAMS.comIndMono;
-    costoTotal = costo * (1 + PARAMS.ivaComprasMono) + flete + embalaje + envio;
-  }
-
-  const tbody = document.getElementById('tbody');
-  tbody.innerHTML = '';
-
-  function fila(ch){
-    const com = comisionCanal(ch);
-    const denom = 1 - margenObj - iibb - comInd;
-    let pvp = 0, redondeado = 0, margenReal = 0;
-    if(denom > 0 && com < 1){
-      pvp = (costoTotal / denom) * (1 + ivaVentas) / (1 - com);
-      redondeado = Math.ceil(pvp/100)*100;
-      const base = pvp/(1+ivaVentas);
-      margenReal = (base - pvp*com - base*iibb - base*comInd - costoTotal) / base;
-    }
-    const tr = document.createElement('tr');
-    if(!ch.principal) tr.className = 'hidden-row';
-    tr.innerHTML = `
-      <td>${ch.label}</td>
-      <td class="num">${(com*100).toFixed(2)}%</td>
-      <td class="num">$${pvp.toLocaleString('es-AR',{maximumFractionDigits:0})}</td>
-      <td class="num">$${redondeado.toLocaleString('es-AR')}</td>
-      <td class="num">${(margenReal*100).toFixed(1)}%</td>
-    `;
-    return tr;
-  }
-
-  PARAMS.channels.filter(ch => ch.principal).forEach(ch => tbody.appendChild(fila(ch)));
-  PARAMS.channels.filter(ch => !ch.principal).forEach(ch => tbody.appendChild(fila(ch)));
-
-  const hiddenRows = document.querySelectorAll('.hidden-row');
-  hiddenRows.forEach(r => r.style.display = verMasAbierto ? '' : 'none');
-}
-
-let verMasAbierto = false;
-function toggleVerMas(){
-  verMasAbierto = !verMasAbierto;
-  document.querySelectorAll('.hidden-row').forEach(r => r.style.display = verMasAbierto ? '' : 'none');
-  document.getElementById('btnVerMas').textContent = verMasAbierto ? 'Ver menos ▲' : 'Ver más medios de pago ▼';
-}
-
-cargarParametros();
+fillRubroSelect();
+recalc();
 </script>
 </body>
 </html>
