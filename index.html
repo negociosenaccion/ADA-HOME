@@ -171,38 +171,33 @@ const rubrosDefault=[
   {n:'COCINA Y BAZAR',obj:0.55,min:0.43}
 ];
 
-const channelDefs=[
-  {row:23,group:'Pago Nube (14 días)',cuotas:'2 cuotas'},
-  {row:24,group:'Pago Nube (14 días)',cuotas:'3 cuotas'},
-  {row:25,group:'Pago Nube (14 días)',cuotas:'6 cuotas'},
-  {row:26,group:'Pago Nube (7 días)',cuotas:'2 cuotas'},
-  {row:27,group:'Pago Nube (7 días)',cuotas:'3 cuotas'},
-  {row:28,group:'Pago Nube (7 días)',cuotas:'6 cuotas'},
-  {row:29,group:'Pago Nube (7 días)',cuotas:'9 cuotas'},
-  {row:30,group:'Pago Nube (7 días)',cuotas:'12 cuotas'},
-  {row:31,group:'Transferencia Pago Nube (2 días)',cuotas:'',esTransf:true},
-  {row:32,group:'Mercado Pago',cuotas:'2 cuotas'},
-  {row:33,group:'Mercado Pago',cuotas:'3 cuotas'},
-  {row:34,group:'Mercado Pago',cuotas:'6 cuotas'},
-  {row:35,group:'MODO',cuotas:'2 cuotas'},
-  {row:36,group:'MODO',cuotas:'3 cuotas'},
-  {row:37,group:'MODO',cuotas:'6 cuotas'},
-  {row:39,group:'Payway (10 días hábiles)',cuotas:'3 cuotas'},
-  {row:40,group:'Payway (10 días hábiles)',cuotas:'6 cuotas'}
+// Canales por defecto (antes de subir ningún Excel) — misma info que el archivo
+// original, pero ya no depende de números de fila fijos.
+const defaultChannels=[
+  {group:'Pago Nube (14 días)',cuotas:'2 cuotas',comm:0.131527,activo:false},
+  {group:'Pago Nube (14 días)',cuotas:'3 cuotas',comm:0.158994,activo:false},
+  {group:'Pago Nube (14 días)',cuotas:'6 cuotas',comm:0.260029,activo:false},
+  {group:'Pago Nube (7 días)',cuotas:'2 cuotas',comm:0.155969,activo:false},
+  {group:'Pago Nube (7 días)',cuotas:'3 cuotas',comm:0.188639,activo:true},
+  {group:'Pago Nube (7 días)',cuotas:'6 cuotas',comm:0.214049,activo:true},
+  {group:'Pago Nube (7 días)',cuotas:'9 cuotas',comm:0.270919,activo:false},
+  {group:'Pago Nube (7 días)',cuotas:'12 cuotas',comm:0.316899,activo:false},
+  {group:'Transferencia Pago Nube (2 días)',cuotas:'',comm:0.0363,activo:true,esTransf:true},
+  {group:'Mercado Pago',cuotas:'2 cuotas',comm:0.134915,activo:true},
+  {group:'Mercado Pago',cuotas:'3 cuotas',comm:0.343705,activo:false},
+  {group:'Mercado Pago',cuotas:'6 cuotas',comm:0.186945,activo:false},
+  {group:'MODO',cuotas:'2 cuotas',comm:0.097889,activo:false},
+  {group:'MODO',cuotas:'3 cuotas',comm:0.077319,activo:false},
+  {group:'MODO',cuotas:'6 cuotas',comm:0.066429,activo:false},
+  {group:'Payway (10 días hábiles)',cuotas:'3 cuotas',comm:0.107811,activo:true},
+  {group:'Payway (10 días hábiles)',cuotas:'6 cuotas',comm:0.187792,activo:true}
 ];
-
-const defaultH={23:0.131527,24:0.158994,25:0.260029,26:0.155969,27:0.188639,28:0.214049,
-  29:0.270919,30:0.316899,31:0.0363,32:0.134915,33:0.343705,34:0.186945,35:0.097889,
-  36:0.077319,37:0.066429,39:0.107811,40:0.187792};
-const defaultActivo={23:false,24:false,25:false,26:false,27:true,28:true,29:false,30:false,
-  31:true,32:true,33:false,34:false,35:false,36:false,37:false,39:true,40:true};
 
 let params={
   ivaSoc:0.21, iibbSoc:0.04, comIndSoc:0.04,
   ivaMono:0.0, ivaComprasNoRec:0.0, iibbMono:0.04, comIndMono:0.0,
   rubros: rubrosDefault,
-  comm: {...defaultH},
-  activo: {...defaultActivo}
+  channels: defaultChannels
 };
 let facturacion='sas';
 
@@ -222,11 +217,14 @@ function labelFor(ch){
   return `${ch.group} ${ch.cuotas}`.trim();
 }
 
-function anchorRow(){
-  const c28=params.activo[28], c25=params.activo[25];
-  if(c28) return 28;
-  if(c25) return 25;
-  return 28;
+function findAnchor(){
+  const pn6=params.channels.filter(c=>c.group.toUpperCase().includes('PAGO NUBE') && c.cuotas.includes('6') && c.activo);
+  if(pn6.length){
+    const con7=pn6.find(c=>c.group.includes('7'));
+    return con7||pn6[0];
+  }
+  const anyPn6=params.channels.filter(c=>c.group.toUpperCase().includes('PAGO NUBE') && c.cuotas.includes('6'));
+  return anyPn6.find(c=>c.group.includes('7'))||anyPn6[0]||params.channels[0];
 }
 
 function statusColors(marginPct){
@@ -261,15 +259,15 @@ function calcMargin(price,cmv,comm){
   }
 }
 
-function rowsFor(defs,pvp,cmv,rubro,descEf,descTr){
+function rowsFor(defs,pvp,cmv,rubro,descEf,descTr,anchor){
   return defs.map(ch=>{
-    const comm=params.comm[ch.row]||0;
+    const comm=ch.comm||0;
     const desc=ch.esTransf ? descTr : 0;
     const label=labelFor(ch);
     const price=pvp*(1-desc);
     const marginPct=calcMargin(price,cmv,comm);
     const s=statusColors(marginPct);
-    const anchorTag=ch.row===anchorRow()?'<span class="anchor-tag">Ancla</span>':'';
+    const anchorTag=ch===anchor?'<span class="anchor-tag">Ancla</span>':'';
     const descSub=desc>0?`<div class="chan-sub">${Math.round(desc*100)}% off sobre lista</div>`:'';
     return `<tr>
       <td><span class="chan-name">${label}${anchorTag}</span>${descSub}</td>
@@ -317,12 +315,13 @@ function recalc(){
     cmv = costo*(1+params.ivaComprasNoRec) + costo*fletePct + envio;
   }
 
-  const aRow=anchorRow();
-  const commAnchor=params.comm[aRow]||0;
+  const anchor=findAnchor();
+  const commAnchor=anchor?anchor.comm:0;
   const pvpRaw=calcPVP(cmv,margen,commAnchor);
   const pvp=isFinite(pvpRaw)&&pvpRaw>0?Math.ceil(pvpRaw/100)*100:NaN;
 
-  $('anchor-label').textContent=`Precio de lista sugerido · Tienda Nube 6 cuotas (${aRow===25?'14':'7'} días) sin interés`;
+  const diasLabel=anchor&&anchor.group.includes('7')?'7':'14';
+  $('anchor-label').textContent=`Precio de lista sugerido · Tienda Nube 6 cuotas (${diasLabel} días) sin interés`;
   $('pvp-out').textContent=money(pvp);
   if(isFinite(pvp)){
     const mAnchor=calcMargin(pvp,cmv,commAnchor);
@@ -331,13 +330,13 @@ function recalc(){
     $('pvp-check').textContent='Revisá los datos: el margen o la comisión no permiten calcular un precio.';
   }
 
-  const activos=channelDefs.filter(c=>params.activo[c.row]);
-  const inactivos=channelDefs.filter(c=>!params.activo[c.row]);
+  const activos=params.channels.filter(c=>c.activo);
+  const inactivos=params.channels.filter(c=>!c.activo);
 
   $('rows-activos').innerHTML =
     discountRowsHTML(pvp,cmv,rubro,descEf,descTr) +
-    rowsFor(activos,pvp,cmv,rubro,descEf,descTr);
-  $('rows-inactivos').innerHTML = rowsFor(inactivos,pvp,cmv,rubro,descEf,descTr);
+    rowsFor(activos,pvp,cmv,rubro,descEf,descTr,anchor);
+  $('rows-inactivos').innerHTML = rowsFor(inactivos,pvp,cmv,rubro,descEf,descTr,anchor);
 }
 
 $('tab-sas').addEventListener('click',()=>{
@@ -373,7 +372,61 @@ function cellVal(ws,addr){
 }
 function cellStr(ws,addr){
   const c=ws[addr];
-  return c ? String(c.v).trim() : '';
+  return c && c.v!==undefined && c.v!==null ? String(c.v).trim() : '';
+}
+
+// Busca en la columna A, entre searchStart y searchEnd, una fila cuyo texto
+// contenga alguno de los substrings dados, y devuelve el número (columna B)
+// de esa fila. Así no importa si se insertan o borran filas arriba.
+function findRateByLabel(ws,substrings,searchStart,searchEnd){
+  for(let r=searchStart;r<=searchEnd;r++){
+    const a=cellStr(ws,'A'+r).toUpperCase();
+    if(a && substrings.some(s=>a.includes(s))){
+      const v=cellVal(ws,'B'+r);
+      if(v!==null) return v;
+    }
+  }
+  return null;
+}
+
+// Encuentra la primera fila que contenga el texto dado en la columna indicada (por defecto A).
+function findRowContaining(ws,text,maxRow,col){
+  col=col||'A';
+  for(let r=1;r<=maxRow;r++){
+    const a=cellStr(ws,col+r).toUpperCase();
+    if(a.includes(text)) return r;
+  }
+  return null;
+}
+
+// Recorre la tabla de comisiones por medio de pago fila por fila desde el
+// encabezado ("Plataforma / Modalidad") hacia abajo. El grupo (columna A)
+// puede venir combinado en varias filas (celda fusionada), así que se
+// arrastra el último valor visto. Es resiliente a filas nuevas insertadas.
+function parseChannelTable(ws){
+  const headerRow=findRowContaining(ws,'MODALIDAD',60)||22;
+  const list=[];
+  let currentGroup='';
+  for(let r=headerRow+1;r<=headerRow+30;r++){
+    const aStr=cellStr(ws,'A'+r);
+    const bStr=cellStr(ws,'B'+r);
+    if(aStr) currentGroup=aStr;
+    if(!currentGroup || !bStr) continue;
+    const grpUp=currentGroup.toUpperCase();
+    if(grpUp.includes('EFECTIVO')) continue; // se maneja aparte con descuento fijo
+    const hVal=cellVal(ws,'H'+r);
+    if(hVal===null) continue; // fila incompleta/placeholder, se ignora
+    const iRaw=cellStr(ws,'I'+r).toUpperCase();
+    const esTransf=grpUp.includes('TRANSF');
+    list.push({
+      group:currentGroup.trim(),
+      cuotas:bStr.trim(),
+      comm:hVal,
+      activo:iRaw.indexOf('SI')===0,
+      esTransf
+    });
+  }
+  return list;
 }
 
 $('file-input').addEventListener('change',(e)=>{
@@ -388,25 +441,29 @@ $('file-input').addEventListener('change',(e)=>{
       const ws=wb.Sheets['Parámetros'] || wb.Sheets['Parametros'];
       if(!ws) throw new Error('No se encontró la hoja "Parámetros" en el archivo.');
 
-      const ivaSoc=cellVal(ws,'B6'), iibbSoc=cellVal(ws,'B8'), comIndSoc=cellVal(ws,'B9');
-      const ivaMono=cellVal(ws,'B53'), ivaComprasNoRec=cellVal(ws,'B54'),
-            iibbMono=cellVal(ws,'B55'), comIndMono=cellVal(ws,'B56');
+      const sasStart=findRowContaining(ws,'(SAS)',60)||4;
+      const monoStart=findRowContaining(ws,'MONOTRIBUTO',60)||52;
+
+      const ivaSoc=findRateByLabel(ws,['IVA VENTAS'],sasStart,sasStart+10);
+      const iibbSoc=findRateByLabel(ws,['IIBB'],sasStart,sasStart+10);
+      const comIndSoc=findRateByLabel(ws,['COM. E IND','COMERCIO E IND'],sasStart,sasStart+10);
+
+      const ivaMono=findRateByLabel(ws,['IVA VENTAS'],monoStart,monoStart+10);
+      const ivaComprasNoRec=findRateByLabel(ws,['IVA COMPRAS'],monoStart,monoStart+10);
+      const iibbMono=findRateByLabel(ws,['IIBB'],monoStart,monoStart+10);
+      const comIndMono=findRateByLabel(ws,['COM. E IND','COMERCIO E IND'],monoStart,monoStart+10);
 
       const newRubros=[];
-      for(let r=5;r<=9;r++){
+      const rubroHeaderRow=findRowContaining(ws,'RUBROS',60,'K');
+      const rubroStart=rubroHeaderRow?rubroHeaderRow+1:5;
+      for(let r=rubroStart;r<=rubroStart+10;r++){
         const n=cellStr(ws,'K'+r);
         const obj=cellVal(ws,'L'+r);
-        const min=cellVal(ws,'M'+r);
-        if(n && obj!==null && min!==null) newRubros.push({n,obj,min});
+        if(n && obj!==null) newRubros.push({n,obj});
+        else if(!n && newRubros.length) break; // fin de la tabla
       }
 
-      const newComm={}, newActivo={};
-      channelDefs.forEach(ch=>{
-        const h=cellVal(ws,'H'+ch.row);
-        const iRaw=cellStr(ws,'I'+ch.row).toUpperCase();
-        newComm[ch.row]= h!==null ? h : defaultH[ch.row];
-        newActivo[ch.row]= iRaw.indexOf('SI')===0;
-      });
+      const newChannels=parseChannelTable(ws);
 
       params={
         ivaSoc: ivaSoc??params.ivaSoc,
@@ -417,11 +474,22 @@ $('file-input').addEventListener('change',(e)=>{
         iibbMono: iibbMono??params.iibbMono,
         comIndMono: comIndMono??params.comIndMono,
         rubros: newRubros.length?newRubros:rubrosDefault,
-        comm:newComm, activo:newActivo
+        channels: newChannels.length?newChannels:defaultChannels
       };
       fillRubroSelect();
-      $('status-banner').className='banner info';
-      $('status-banner').textContent=`Parámetros actualizados desde ${file.name} — ${new Date().toLocaleString('es-AR')}.`;
+      const selIdx=parseInt($('rubro').value)||0;
+      const selRubro=params.rubros[selIdx];
+      if(selRubro) $('margen').value=(selRubro.obj*100).toFixed(1);
+
+      const warnings=[];
+      if(newRubros.length<5) warnings.push(`solo se leyeron ${newRubros.length} de 5 rubros`);
+      if(newChannels.length<10) warnings.push(`solo se leyeron ${newChannels.length} medios de pago (esperaba ~17)`);
+      if([ivaSoc,iibbSoc,comIndSoc].some(v=>v===null)) warnings.push('no se pudo leer algún impuesto de Sociedad');
+      if([ivaMono,ivaComprasNoRec,iibbMono,comIndMono].some(v=>v===null)) warnings.push('no se pudo leer algún impuesto de Monotributo');
+
+      $('status-banner').className= warnings.length ? 'banner warn' : 'banner info';
+      const warnTxt= warnings.length ? ` ⚠ ${warnings.join('; ')}.` : '';
+      $('status-banner').textContent=`Parámetros actualizados desde ${file.name} — ${new Date().toLocaleString('es-AR')}.${warnTxt}`;
       recalc();
     }catch(err){
       $('status-banner').className='banner bad';
