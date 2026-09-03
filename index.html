@@ -90,6 +90,7 @@
       <label class="upload-btn" for="file-input">Cargar Parámetros.xlsx</label>
       <input type="file" id="file-input" accept=".xlsx" style="display:none;">
       <span id="file-name" style="font-size:13px;color:var(--text-secondary);"></span>
+      <button id="reset-params" style="margin-left:auto;background:none;border:none;color:var(--text-secondary);font-size:12.5px;text-decoration:underline;cursor:pointer;">Restablecer a valores de referencia</button>
     </div>
   </div>
 
@@ -164,15 +165,15 @@
 
 <script>
 const rubrosDefault=[
-  {n:'SILLONES Y MUEBLES',obj:0.45,min:0.35},
-  {n:'ILUMINACION',obj:0.50,min:0.40},
-  {n:'PARA DORMITORIOS',obj:0.48,min:0.38},
-  {n:'DECO Y MAS',obj:0.55,min:0.45},
-  {n:'COCINA Y BAZAR',obj:0.55,min:0.43}
+  {n:'SILLONES Y MUEBLES',obj:0.20},
+  {n:'ILUMINACION',obj:0.20},
+  {n:'PARA DORMITORIOS',obj:0.20},
+  {n:'DECO Y MAS',obj:0.20},
+  {n:'COCINA Y BAZAR',obj:0.20}
 ];
 
-// Canales por defecto (antes de subir ningún Excel) — misma info que el archivo
-// original, pero ya no depende de números de fila fijos.
+// Canales por defecto (antes de subir ningún Excel) — tomados directamente de
+// tu archivo de referencia ada_calculo_de_precios_v2.xlsx, no corregidos a mano.
 const defaultChannels=[
   {group:'Pago Nube (14 días)',cuotas:'2 cuotas',comm:0.131527,activo:false},
   {group:'Pago Nube (14 días)',cuotas:'3 cuotas',comm:0.158994,activo:false},
@@ -186,16 +187,17 @@ const defaultChannels=[
   {group:'Mercado Pago',cuotas:'2 cuotas',comm:0.134915,activo:true},
   {group:'Mercado Pago',cuotas:'3 cuotas',comm:0.343705,activo:false},
   {group:'Mercado Pago',cuotas:'6 cuotas',comm:0.186945,activo:false},
-  {group:'MODO',cuotas:'2 cuotas',comm:0.097889,activo:false},
-  {group:'MODO',cuotas:'3 cuotas',comm:0.077319,activo:false},
+  {group:'MODO',cuotas:'2 cuotas',comm:0,activo:false},
+  {group:'MODO',cuotas:'3 cuotas',comm:0,activo:false},
   {group:'MODO',cuotas:'6 cuotas',comm:0.066429,activo:false},
+  {group:'Payway (10 días hábiles)',cuotas:'0 cuotas',comm:0.0242,activo:true},
   {group:'Payway (10 días hábiles)',cuotas:'3 cuotas',comm:0.107811,activo:true},
   {group:'Payway (10 días hábiles)',cuotas:'6 cuotas',comm:0.187792,activo:true}
 ];
 
 let params={
-  ivaSoc:0.21, iibbSoc:0.04, comIndSoc:0.04,
-  ivaMono:0.0, ivaComprasNoRec:0.0, iibbMono:0.04, comIndMono:0.0,
+  ivaSoc:0.21, iibbSoc:0.0475, comIndSoc:0.0049,
+  ivaMono:0.0, ivaComprasNoRec:0.0, iibbMono:0.0475, comIndMono:0.0,
   rubros: rubrosDefault,
   channels: defaultChannels
 };
@@ -429,6 +431,37 @@ function parseChannelTable(ws){
   return list;
 }
 
+const STORAGE_KEY='adahome_params_v1';
+
+function applyParams(newParams, sourceLabel, warnings){
+  params=newParams;
+  fillRubroSelect();
+  const selIdx=parseInt($('rubro').value)||0;
+  const selRubro=params.rubros[selIdx];
+  if(selRubro) $('margen').value=(selRubro.obj*100).toFixed(1);
+
+  const warnTxt=(warnings&&warnings.length)?` ⚠ ${warnings.join('; ')}.`:'';
+  $('status-banner').className=(warnings&&warnings.length)?'banner warn':'banner info';
+  $('status-banner').textContent=`${sourceLabel}${warnTxt}`;
+  recalc();
+}
+
+function saveParamsToStorage(newParams,fileName){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      params:newParams, fileName, savedAt:new Date().toISOString()
+    }));
+  }catch(e){ /* localStorage no disponible: se pierde al recargar, no rompe nada */ }
+}
+
+function loadParamsFromStorage(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(e){ return null; }
+}
+
 $('file-input').addEventListener('change',(e)=>{
   const file=e.target.files[0];
   if(!file) return;
@@ -465,7 +498,7 @@ $('file-input').addEventListener('change',(e)=>{
 
       const newChannels=parseChannelTable(ws);
 
-      params={
+      const newParams={
         ivaSoc: ivaSoc??params.ivaSoc,
         iibbSoc: iibbSoc??params.iibbSoc,
         comIndSoc: comIndSoc??params.comIndSoc,
@@ -476,10 +509,6 @@ $('file-input').addEventListener('change',(e)=>{
         rubros: newRubros.length?newRubros:rubrosDefault,
         channels: newChannels.length?newChannels:defaultChannels
       };
-      fillRubroSelect();
-      const selIdx=parseInt($('rubro').value)||0;
-      const selRubro=params.rubros[selIdx];
-      if(selRubro) $('margen').value=(selRubro.obj*100).toFixed(1);
 
       const warnings=[];
       if(newRubros.length<5) warnings.push(`solo se leyeron ${newRubros.length} de 5 rubros`);
@@ -487,10 +516,8 @@ $('file-input').addEventListener('change',(e)=>{
       if([ivaSoc,iibbSoc,comIndSoc].some(v=>v===null)) warnings.push('no se pudo leer algún impuesto de Sociedad');
       if([ivaMono,ivaComprasNoRec,iibbMono,comIndMono].some(v=>v===null)) warnings.push('no se pudo leer algún impuesto de Monotributo');
 
-      $('status-banner').className= warnings.length ? 'banner warn' : 'banner info';
-      const warnTxt= warnings.length ? ` ⚠ ${warnings.join('; ')}.` : '';
-      $('status-banner').textContent=`Parámetros actualizados desde ${file.name} — ${new Date().toLocaleString('es-AR')}.${warnTxt}`;
-      recalc();
+      saveParamsToStorage(newParams,file.name);
+      applyParams(newParams, `Parámetros actualizados desde ${file.name} — ${new Date().toLocaleString('es-AR')}.`, warnings);
     }catch(err){
       $('status-banner').className='banner bad';
       $('status-banner').textContent='No se pudo leer el archivo: '+err.message;
@@ -499,8 +526,28 @@ $('file-input').addEventListener('change',(e)=>{
   reader.readAsArrayBuffer(file);
 });
 
-fillRubroSelect();
-recalc();
+$('reset-params').addEventListener('click',()=>{
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  $('file-name').textContent='';
+  applyParams({
+    ivaSoc:0.21, iibbSoc:0.0475, comIndSoc:0.0049,
+    ivaMono:0.0, ivaComprasNoRec:0.0, iibbMono:0.0475, comIndMono:0.0,
+    rubros: rubrosDefault, channels: defaultChannels
+  }, 'Usando parámetros de referencia. Subí tu Parámetros.xlsx para actualizar comisiones e impuestos.', []);
+  $('status-banner').className='banner warn';
+});
+
+// Al cargar la página: si hay parámetros guardados de una carga anterior, usarlos
+// en vez de los valores de referencia.
+const cached=loadParamsFromStorage();
+if(cached && cached.params){
+  $('file-name').textContent=cached.fileName?`${cached.fileName} (guardado)`:'';
+  const savedWhen=cached.savedAt?new Date(cached.savedAt).toLocaleString('es-AR'):'';
+  applyParams(cached.params, `Usando parámetros guardados de ${cached.fileName||'una carga anterior'} — ${savedWhen}. Subí un Excel nuevo para actualizar.`, []);
+}else{
+  fillRubroSelect();
+  recalc();
+}
 </script>
 </body>
 </html>
